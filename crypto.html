@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Курсы криптовалют</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header>
+    <h1>Курсы криптовалют</h1>
+    <nav>
+      <a href="index.html" style="color:#f6c700; font-weight:bold; margin-right:20px;">Валюты ЦБ РФ</a>
+      <a href="crypto.html" style="color:#fff; font-weight:bold;">Криптовалюты</a>
+    </nav>
+    <button id="refreshBtn" title="Обновить курсы">🔄 Обновить</button>
+  </header>
+  <main>
+    <input type="search" id="searchInput" placeholder="Поиск по криптовалюте или коду..." autocomplete="off" />
+    <div id="currencies" class="currencies-grid"></div>
+  </main>
+  <div id="converterModal" class="modal hidden">
+    <div class="modal-content">
+      <button id="closeModalBtn" class="close-btn" title="Закрыть окно">×</button>
+      <h2 id="modalTitle">Конвертация</h2>
+      <label>
+        Сумма в криптовалюте:
+        <input type="number" id="inputAmount" min="0" step="any" placeholder="Введите сумму" />
+      </label>
+      <p>
+        Эквивалент в рублях: <span id="convertedAmount">0</span> ₽
+        <button id="copyBtn" title="Скопировать результат">📋</button>
+      </p>
+    </div>
+  </div>
+  <div id="errorMessage" class="error-message hidden"></div>
+  <script src="crypto.js"></script>
+</body>
+</html>
