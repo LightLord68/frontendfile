@@ -1,5 +1,6 @@
 let currenciesList = null;
 let selectedCurrency = null;
+const errorLog = [];
 
 const currenciesContainer = document.getElementById('currencies');
 const converterModal = document.getElementById('converterModal');
@@ -19,6 +20,7 @@ const flagMap = {
   NZD: "NZ", NOK: "NO", PLN: "PL", RON: "RO", SGD: "SG", TJS: "TJ", THB: "TH", TRY: "TR",
   TMT: "TM", UZS: "UZ", UAH: "UA", CZK: "CZ", SEK: "SE", RSD: "RS", ZAR: "ZA", KRW: "KR"
 };
+
 function getFlagUrl(code) {
   if (flagMap[code]) return `https://cdn.jsdelivr.net/npm/country-flag-icons/3x2/${flagMap[code]}.svg`;
   if (code === "XDR") return "https://upload.wikimedia.org/wikipedia/commons/5/5c/UN_Flag.png";
@@ -30,14 +32,25 @@ async function fetchCurrencies() {
     refreshBtn.disabled = true;
     refreshBtn.textContent = 'Загрузка...';
     hideError();
-    const url = 'https://www.cbr-xml-daily.ru/daily_json.js?t=' + Date.now();
+
+    const url = 'https://www.cbr-xml-daily.ru/daily_json.js';
     const response = await fetch(url);
-    if (!response.ok) throw new Error('Ошибка загрузки данных');
+
+    if (!response.ok) {
+      throw new Error(`HTTP ошибка: ${response.status}`);
+    }
+
     const data = await response.json();
+
+    if (!data?.Valute || typeof data.Valute !== 'object') {
+      throw new Error('Некорректный формат ответа сервера');
+    }
+
     currenciesList = data.Valute;
     renderCurrencies();
+
   } catch (e) {
-    showError('Не удалось загрузить курсы валют. Проверьте интернет.');
+    showError(`Ошибка обновления: ${e.message}`);
   } finally {
     refreshBtn.disabled = false;
     refreshBtn.textContent = '🔄 Обновить';
@@ -47,7 +60,12 @@ async function fetchCurrencies() {
 function showError(text) {
   errorMessage.textContent = text;
   errorMessage.classList.remove('hidden');
+  errorLog.push({
+    timestamp: new Date().toISOString(),
+    message: text
+  });
 }
+
 function hideError() {
   errorMessage.classList.add('hidden');
 }
@@ -142,19 +160,32 @@ function closeConverter() {
 }
 
 function handleInput() {
-  const val = parseFloat(inputAmount.value);
+  const cleanValue = inputAmount.value.replace(/,/g, '.').replace(/[^0-9.]/g, '');
+  const val = parseFloat(cleanValue);
+
+  if (!isNaN(val)) {
+    inputAmount.value = val.toString().replace('.', ',');
+  } else {
+    inputAmount.value = '';
+  }
+
   if (!selectedCurrency) return;
+
   if (isNaN(val) || val < 0) {
     convertedAmount.textContent = '0';
     return;
   }
-  let result = 0;
-  if (selectedCurrency.code === 'RUB') {
-    result = val;
-  } else {
-    result = val * selectedCurrency.rate;
-  }
-  convertedAmount.textContent = result.toFixed(2);
+
+  const result = selectedCurrency.code === 'RUB'
+    ? val
+    : val * selectedCurrency.rate;
+
+  convertedAmount.textContent = result.toLocaleString('ru-RU', {
+    style: 'currency',
+    currency: 'RUB',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  });
 }
 
 function handleCopy() {
@@ -168,13 +199,21 @@ function handleCopy() {
 closeModalBtn.addEventListener('click', closeConverter);
 inputAmount.addEventListener('input', handleInput);
 refreshBtn.addEventListener('click', fetchCurrencies);
+
 if (converterModal) {
   converterModal.addEventListener('click', (e) => {
     if (e.target === converterModal) closeConverter();
   });
 }
+
 if (searchInput) searchInput.addEventListener('input', renderCurrencies);
 if (copyBtn) copyBtn.addEventListener('click', handleCopy);
+
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') {
+    fetchCurrencies();
+  }
+});
 
 fetchCurrencies();
 setInterval(fetchCurrencies, 10 * 60 * 1000);
